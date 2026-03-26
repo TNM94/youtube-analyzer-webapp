@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Analyzer — Resumo + Ideias de Negócios</title>
+    <meta name="description" content="Analise qualquer vídeo do YouTube e gere resumos, workflows e ideias de negócio com IA">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Background Effects -->
+    <div class="bg-effects">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-brand" onclick="newAnalysis()" style="cursor:pointer">
+            <div class="icon">▶</div>
+            <span>YouTube Analyzer</span>
+        </div>
+        <div class="nav-links" id="nav-links"></div>
+    </nav>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Analisando vídeo com IA...</div>
+        <div class="loading-step" id="loading-step">Extraindo transcrição...</div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Main Content -->
+    <div class="main">
+
+        <!-- ===== HERO / INPUT ===== -->
+        <section class="hero" id="hero-section">
+            <div class="hero-inner">
+                <div class="hero-badge">
+                    <span class="dot"></span>
+                    Powered by Gemini AI
+                </div>
+                <h1 class="hero-title">Transforme vídeos do YouTube em conhecimento acionável</h1>
+                <p class="hero-subtitle">
+                    Cole o link de qualquer vídeo e receba um resumo completo, workflow visual,
+                    e ideias de aplicação prática para o seu negócio.
+                </p>
+                <div class="input-group">
+                    <input type="text" id="url-input"
+                           placeholder="Cole o link do YouTube aqui..."
+                           autocomplete="off" spellcheck="false">
+                    <button class="btn-primary" onclick="analyzeVideo()" id="btn-analyze">
+                        🔍 Analisar
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== PRESENTATION (hidden until analysis) ===== -->
+        <div id="presentation" class="hidden">
+
+            <!-- COVER -->
+            <section class="cover-info section" id="cover-section">
+                <div class="hero-badge" style="margin-bottom:1.5rem">
+                    <span class="dot"></span>
+                    Resumo gerado por IA
+                </div>
+                <h1 class="cover-title" id="cover-title"></h1>
+                <p class="cover-subtitle" id="cover-subtitle"></p>
+                <div class="cover-meta">
+                    <span class="cover-meta-item" id="cover-date">📅</span>
+                    <span class="cover-meta-item" id="cover-topic-count">📝</span>
+                    <span class="cover-meta-item" id="cover-idea-count">💡</span>
+                    <span class="cover-meta-item">📺 Fonte: YouTube</span>
+                </div>
+            </section>
+
+            <!-- SUMMARY TOPICS -->
+            <section class="section" id="topics-section">
+                <div class="section-header">
+                    <div class="section-number">Resumo Completo</div>
+                    <h2 class="section-title">Pontos <span class="highlight">Principais</span></h2>
+                    <div class="section-divider"></div>
+                </div>
+                <div class="topics-grid" id="topics-grid"></div>
+            </section>
+
+            <!-- WORKFLOW -->
+            <section class="section" id="workflow-section">
+                <div class="section-header">
+                    <div class="section-number">Fluxo de Funcionamento</div>
+                    <h2 class="section-title">Como <span class="highlight">Funciona</span></h2>
+                    <div class="section-divider"></div>
+                </div>
+                <div class="workflow-container">
+                    <div id="workflow-svg"></div>
+                </div>
+            </section>
+
+            <!-- IDEAS -->
+            <section class="section" id="ideas-section">
+                <div class="section-header">
+                    <div class="section-number">Aplicação Prática</div>
+                    <h2 class="section-title">Ideias para <span class="highlight">Negócios</span></h2>
+                    <div class="section-divider"></div>
+                    <p id="ideas-count" style="color:var(--text-muted);font-size:0.85rem;margin-top:0.5rem">10 ideias geradas</p>
+                </div>
+                <div class="ideas-grid" id="ideas-grid"></div>
+                <div class="section-actions">
+                    <button class="btn-secondary" id="btn-more-ideas" onclick="loadMoreIdeas()">
+                        ➕ Carregar mais 10 ideias
+                    </button>
+                </div>
+
+                <!-- NICHE SEARCH -->
+                <div class="niche-search">
+                    <div class="section-header">
+                        <div class="section-number">Busca por Nicho</div>
+                        <h2 class="section-title">Ideias para seu <span class="highlight">Nicho</span></h2>
+                        <div class="section-divider"></div>
+                    </div>
+                    <div class="niche-input-group">
+                        <input type="text" id="niche-input"
+                               placeholder="Digite um nicho (ex: Saúde, Educação, Imobiliário...)"
+                               autocomplete="off">
+                        <button class="btn-primary" id="btn-niche-search" onclick="searchNicheIdeas()">
+                            🔍 Buscar ideias
+                        </button>
+                    </div>
+                    <div class="niche-ideas-grid" id="niche-ideas-grid"></div>
+                </div>
+            </section>
+
+            <!-- CONCLUSION -->
+            <section class="conclusion section" id="conclusion-section">
+                <div class="conclusion-icon">🚀</div>
+                <h2 class="conclusion-title">Pronto para Aplicar?</h2>
+                <p class="conclusion-text" id="conclusion-text"></p>
+                <a href="#" target="_blank" rel="noopener" class="source-link" id="source-link">
+                    ▶ Assistir vídeo original no YouTube
+                </a>
+                <div style="margin-top:2rem">
+                    <button class="btn-secondary" onclick="newAnalysis()">🔄 Analisar outro vídeo</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <footer class="footer">
+        YouTube Video Analyzer · Powered by Gemini AI
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
