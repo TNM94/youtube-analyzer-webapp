@@ -65,7 +65,7 @@ async function analyzeVideo() {
                         if (event.data.success) {
                             resolve(event.data.transcript);
                         } else {
-                            console.warn("Extensão bloqueada/falhou:", event.data.error);
+                            showToast(`⚠️ Extensão falhou: ${event.data.error || "Erro desconhecido"}`);
                             resolve(null);
                         }
                     }
@@ -73,6 +73,11 @@ async function analyzeVideo() {
                 window.addEventListener("message", listener);
                 window.postMessage({ type: "YT_ANALYZER_REQUEST", id: reqId, videoId: videoId }, "*");
             });
+
+            // Se o timeout de 8s disparar, e transcriptData for null
+            if (!transcriptData && state.isLoading) {
+                 // The promise resolved to null either via timeout or error
+            }
         }
 
         updateLoadingStep(transcriptData ? "Processando vídeo com a IA Gemini..." : "Extraindo transcrição via Nuvem e enviando para IA...");
