@@ -268,8 +268,14 @@ def analyze():
 
     try:
         video_id = extract_video_id(url)
-        youtube_cookies = request.json.get("cookies", "").strip() or os.environ.get("YOUTUBE_COOKIES", "")
-        transcript = get_transcript(video_id, cookies_text=youtube_cookies)
+        
+        # 1. Tenta pegar transcript enviado pela extensão
+        transcript = request.json.get("transcript")
+        
+        # 2. Se não veio da extensão, tenta baixar via Nuvem (com ou sem cookies)
+        if not transcript:
+            youtube_cookies = request.json.get("cookies", "").strip() or os.environ.get("YOUTUBE_COOKIES", "")
+            transcript = get_transcript(video_id, cookies_text=youtube_cookies)
 
         # Truncate if too long
         if len(transcript) > 80000:

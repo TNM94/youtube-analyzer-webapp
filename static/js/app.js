@@ -44,9 +44,44 @@ async function analyzeVideo() {
     showLoading("Extraindo transcrição do vídeo...");
 
     try {
-        updateLoadingStep("Extraindo transcrição do vídeo...");
-        const cookies = localStorage.getItem("yt_cookies") || "";
-        const data = await apiCall("/api/analyze", { url, cookies });
+        let transcriptData = null;
+        
+        // Tenta usar a Extensão do Chrome (se instalada)
+        if (window.ytAnalyzerExtensionInstalled) {
+            updateLoadingStep("Usando Extensão Pro para capturar legendas...");
+            const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
+            const videoId = videoIdMatch ? videoIdMatch[1] : url;
+            
+            transcriptData = await new Promise((resolve) => {
+                const reqId = Date.now().toString();
+                // Timeout limite p/ extensão (8s)
+                const timeout = setTimeout(() => resolve(null), 8000);
+                
+                const listener = (event) => {
+                    if (event.source !== window || !event.data || event.data.type !== "YT_ANALYZER_RESPONSE") return;
+                    if (event.data.id === reqId) {
+                        clearTimeout(timeout);
+                        window.removeEventListener("message", listener);
+                        if (event.data.success) {
+                            resolve(event.data.transcript);
+                        } else {
+                            console.warn("Extensão bloqueada/falhou:", event.data.error);
+                            resolve(null);
+                        }
+                    }
+                };
+                window.addEventListener("message", listener);
+                window.postMessage({ type: "YT_ANALYZER_REQUEST", id: reqId, videoId: videoId }, "*");
+            });
+        }
+
+        updateLoadingStep(transcriptData ? "Processando vídeo com a IA Gemini..." : "Extraindo transcrição via Nuvem e enviando para IA...");
+        
+        const payload = { url: url };
+        // Envia o texto via extensão p/ api se disponível (bypass Nuvem)
+        if (transcriptData) payload.transcript = transcriptData;
+        
+        const data = await apiCall("/api/analyze", payload);
 
         state.videoId = data.video_id;
         state.videoUrl = data.video_url;
@@ -455,24 +490,144 @@ function truncate(text, max) {
     return text.length > max ? text.slice(0, max - 1) + "…" : text;
 }
 
-// ===== SETTINGS =====
+// ===== PDF EXPORT =====
 
-function toggleSettings() {
-    const modal = $("#settings-modal");
+function exportToPDF() {
+    const btn = $("#btn-export-pdf");
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "⏳ Gerando...";
+    btn.disabled = true;
+
+    const element = $("#presentation");
+    
+    // Hide buttons dynamically
+    const actions = document.querySelector(".presentation-actions");
+    if (actions) actions.style.display = "none";
+    const moreBtn = $("#btn-more-ideas");
+    if (moreBtn) moreBtn.style.display = "none";
+    const nicheSearch = document.querySelector(".niche-search");
+    if (nicheSearch) nicheSearch.style.display = "none";
+
+    const opt = {
+        margin: [15, 15, 15, 15],
+        filename: `Analise_YouTube_${state.videoId || 'Video'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#0a0a1a" },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save().then(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        // Restore buttons
+        if (actions) actions.style.display = "flex";
+        if (moreBtn) moreBtn.style.display = "block";
+        if (nicheSearch) nicheSearch.style.display = "block";
+        showToast("PDF salvo com sucesso!");
+    });
+}
+
+// ===== LIBRARY (SAVED ANALYSES) =====
+
+function toggleLibrary() {
+    const modal = $("#library-modal");
     if (modal.classList.contains("hidden")) {
         modal.classList.remove("hidden");
-        const savedCookies = localStorage.getItem("yt_cookies") || "";
-        $("#input-cookies").value = savedCookies;
+        renderLibrary();
     } else {
         modal.classList.add("hidden");
     }
 }
 
-function saveSettings() {
-    const cookies = $("#input-cookies").value.trim();
-    localStorage.setItem("yt_cookies", cookies);
-    toggleSettings();
-    showToast("Configurações salvas com sucesso!");
+function saveToLibrary() {
+    if (!state.data) return;
+    
+    let history = [];
+    try {
+        history = JSON.parse(localStorage.getItem('ytHelper_history') || '[]');
+    } catch (e) {}
+
+    const exists = history.find(h => h.video_id === state.data.video_id);
+    if (!exists) {
+        state.data.savedAt = new Date().toISOString();
+        history.unshift(state.data);
+        localStorage.setItem('ytHelper_history', JSON.stringify(history));
+        showToast("Análise salva na Biblioteca de acessos rápidos!");
+    } else {
+        showToast("Esta análise já está na sua Biblioteca.");
+    }
+}
+
+function renderLibrary() {
+    const grid = $("#library-grid");
+    const emptyMsg = $("#library-empty");
+    
+    let history = [];
+    try {
+        history = JSON.parse(localStorage.getItem('ytHelper_history') || '[]');
+    } catch (e) {}
+
+    if (history.length === 0) {
+        grid.style.display = "none";
+        emptyMsg.style.display = "block";
+        return;
+    }
+
+    grid.style.display = "grid";
+    emptyMsg.style.display = "none";
+    grid.innerHTML = "";
+
+    history.forEach((item, index) => {
+        const card = document.createElement("div");
+        card.className = "topic-card"; 
+        card.style.cursor = "pointer";
+        card.style.position = "relative";
+        
+        const dateStr = item.savedAt ? new Date(item.savedAt).toLocaleDateString('pt-BR') : 'Hoje';
+        
+        card.innerHTML = `
+            <img class="topic-image" src="https://img.youtube.com/vi/${item.video_id}/mqdefault.jpg" alt="Thumbnail" loading="lazy">
+            <div class="topic-content">
+                <div class="topic-title" style="font-size:0.95rem; margin-bottom:0.5rem">${escapeHtml(truncate(item.title || "Vídeo Salvo", 50))}</div>
+                <div class="topic-description" style="font-size:0.8rem">Salvo em: ${dateStr}</div>
+            </div>
+            <button onclick="deleteFromLibrary(event, ${index})" style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:24px; height:24px; cursor:pointer;" title="Remover">✕</button>
+        `;
+        
+        card.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') return;
+            loadFromLibrary(item);
+        });
+        
+        grid.appendChild(card);
+    });
+}
+
+function deleteFromLibrary(e, index) {
+    e.stopPropagation();
+    let history = JSON.parse(localStorage.getItem('ytHelper_history') || '[]');
+    history.splice(index, 1);
+    localStorage.setItem('ytHelper_history', JSON.stringify(history));
+    renderLibrary();
+    showToast("Análise removida da Biblioteca.");
+}
+
+function loadFromLibrary(data) {
+    toggleLibrary();
+    
+    state.videoId = data.video_id;
+    state.videoUrl = data.video_url;
+    state.data = data;
+    state.existingIdeas = (data.ideas || []).map(i => `${i.niche}: ${i.title}`);
+    
+    renderPresentation(data);
+    
+    $("#presentation").classList.remove("hidden");
+    $("#hero-section").classList.add("hidden");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setupNavLinks();
+    observeSections();
+    showToast("Análise carregada do cache!");
 }
 
 // ===== NAVIGATION =====

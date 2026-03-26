@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
 </head>
 <body>
     <!-- Background Effects -->
@@ -25,7 +26,7 @@
             <span>YouTube Analyzer</span>
         </div>
         <div class="nav-links" id="nav-links"></div>
-        <button id="btn-settings" class="btn-icon" onclick="toggleSettings()" aria-label="Configurações" title="Configurações (Bypass YouTube IP Block)">⚙️</button>
+        <button id="btn-library" class="btn-icon" onclick="toggleLibrary()" aria-label="Biblioteca de Análises" title="Biblioteca Salva">📚 Biblioteca</button>
     </nav>
 
     <!-- Loading Overlay -->
@@ -69,9 +70,15 @@
 
             <!-- COVER -->
             <section class="cover-info section" id="cover-section">
-                <div class="hero-badge" style="margin-bottom:1.5rem">
-                    <span class="dot"></span>
-                    Resumo gerado por IA
+                <div style="display:flex; justify-content: space-between; align-items: start; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+                    <div class="hero-badge" style="margin-bottom: 0;">
+                        <span class="dot"></span>
+                        Resumo gerado por IA
+                    </div>
+                    <div class="presentation-actions" style="display: flex; gap: 0.5rem;" data-html2canvas-ignore>
+                        <button class="btn-secondary" onclick="exportToPDF()" id="btn-export-pdf" style="padding: 0.6rem 1rem; font-size: 0.85rem;">📄 Baixar PDF</button>
+                        <button class="btn-primary" onclick="saveToLibrary()" id="btn-save-library" style="padding: 0.6rem 1rem; font-size: 0.85rem;">💾 Salvar</button>
+                    </div>
                 </div>
                 <h1 class="cover-title" id="cover-title"></h1>
                 <p class="cover-subtitle" id="cover-subtitle"></p>
@@ -158,22 +165,18 @@
         YouTube Video Analyzer · Powered by Gemini AI
     </footer>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal hidden">
-        <div class="modal-content">
+    <!-- Library Modal -->
+    <div id="library-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 800px;">
             <div class="modal-header">
-                <h3>⚙️ Configurações (Bypass Bloqueios)</h3>
-                <button class="btn-close" onclick="toggleSettings()">×</button>
+                <h3>📚 Suas Análises Salvas</h3>
+                <button class="btn-close" onclick="toggleLibrary()">×</button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label for="input-cookies" style="display:block; margin-bottom:0.5rem; font-weight:600">YouTube Cookies (Opcional)</label>
-                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.4">
-                        Essencial para rodar no Render (Cloud). Envie seus cookies do YouTube no formato Netscape para evitar o erro de IP bloqueado ao baixar transcrições. Use a extensão "Get cookies.txt LOCALLY" no Chrome.
-                    </p>
-                    <textarea id="input-cookies" rows="6" placeholder="# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tFALSE\t17..." style="width:100%; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:var(--text); padding:1rem; border-radius:8px; font-family:var(--font-mono); font-size:0.8rem; resize:vertical;"></textarea>
+                <p id="library-empty" style="color:var(--text-muted); text-align:center; padding: 2rem;">Nenhuma análise salva ainda. Finalize uma análise e clique em "Salvar".</p>
+                <div id="library-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                    <!-- Cards dinâmicos -->
                 </div>
-                <button class="btn-primary" onclick="saveSettings()" style="width:100%; margin-top:1.5rem">💾 Salvar Configurações</button>
             </div>
         </div>
     </div>
