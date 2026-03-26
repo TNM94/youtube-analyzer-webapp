@@ -55,7 +55,10 @@ async function analyzeVideo() {
             transcriptData = await new Promise((resolve) => {
                 const reqId = Date.now().toString();
                 // Timeout limite p/ extensão (8s)
-                const timeout = setTimeout(() => resolve(null), 8000);
+                const timeout = setTimeout(() => {
+                    showToast("⚠️ Timeout da Extensão (8s). Sem resposta do background script.");
+                    resolve(null);
+                }, 8000);
                 
                 const listener = (event) => {
                     if (event.source !== window || !event.data || event.data.type !== "YT_ANALYZER_RESPONSE") return;
@@ -74,10 +77,11 @@ async function analyzeVideo() {
                 window.postMessage({ type: "YT_ANALYZER_REQUEST", id: reqId, videoId: videoId }, "*");
             });
 
-            // Se o timeout de 8s disparar, e transcriptData for null
             if (!transcriptData && state.isLoading) {
                  // The promise resolved to null either via timeout or error
             }
+        } else {
+            showToast("⚠️ A Extensão Chrome NÃO está injetada nesta página! Recarregue a aba, verifique as permissões ou atualize a extensão.");
         }
 
         updateLoadingStep(transcriptData ? "Processando vídeo com a IA Gemini..." : "Extraindo transcrição via Nuvem e enviando para IA...");
