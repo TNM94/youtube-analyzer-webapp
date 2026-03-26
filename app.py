@@ -55,44 +55,29 @@ def extract_video_id(url: str) -> str:
 
 
 def get_transcript(video_id: str, lang: str = "pt", cookies_text: str = None) -> str:
-    import tempfile
-    
-    cookie_file = None
-    if cookies_text:
-        fd, cookie_file = tempfile.mkstemp(suffix=".txt")
-        with os.fdopen(fd, 'w') as f:
-            f.write(cookies_text)
-            
+    ytt = YouTubeTranscriptApi()
+    langs = [lang]
+    if lang != "pt":
+        langs.append("pt")
+    if "en" not in langs:
+        langs.append("en")
+
     try:
-        if cookie_file:
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id, cookies=cookie_file)
-        else:
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-            
-        langs = [lang]
-        if lang != "pt":
-            langs.append("pt")
-        if "en" not in langs:
-            langs.append("en")
-            
-        # Try to find exactly what we want
-        for l in langs:
+        entries = ytt.fetch(video_id, languages=langs)
+        return _join(entries)
+    except Exception:
+        pass
+
+    try:
+        for t in ytt.list(video_id):
             try:
-                t = transcript_list.find_transcript([l])
                 return _join(t.fetch())
             except Exception:
                 continue
-                
-        # Fallback to anything available
-        return _join(tuple(transcript_list)[0].fetch())
     except Exception as e:
-        raise RuntimeError(f"Erro na transcrição (IP bloqueado pelo YouTube ou vídeo sem legendas). Configure cookies do YouTube ou tente rodar localmente. Erro: {e}")
-    finally:
-        if cookie_file and os.path.exists(cookie_file):
-            try:
-                os.remove(cookie_file)
-            except:
-                pass
+        raise RuntimeError(f"Erro na transcrição (Bloqueio IP ou vídeo sem legendas). Instale a Extensão Pro do App para burlar isso! Detalhes: {e}")
+
+    raise RuntimeError("Nenhuma transcrição disponível")
 
 
 def _join(entries) -> str:
