@@ -25,6 +25,7 @@
             <span>YouTube Analyzer</span>
         </div>
         <div class="nav-links" id="nav-links"></div>
+        <button id="btn-settings" class="btn-icon" onclick="toggleSettings()" aria-label="Configurações" title="Configurações (Bypass YouTube IP Block)">⚙️</button>
     </nav>
 
     <!-- Loading Overlay -->
@@ -156,6 +157,26 @@
     <footer class="footer">
         YouTube Video Analyzer · Powered by Gemini AI
     </footer>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ Configurações (Bypass Bloqueios)</h3>
+                <button class="btn-close" onclick="toggleSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="input-cookies" style="display:block; margin-bottom:0.5rem; font-weight:600">YouTube Cookies (Opcional)</label>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.4">
+                        Essencial para rodar no Render (Cloud). Envie seus cookies do YouTube no formato Netscape para evitar o erro de IP bloqueado ao baixar transcrições. Use a extensão "Get cookies.txt LOCALLY" no Chrome.
+                    </p>
+                    <textarea id="input-cookies" rows="6" placeholder="# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tFALSE\t17..." style="width:100%; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:var(--text); padding:1rem; border-radius:8px; font-family:var(--font-mono); font-size:0.8rem; resize:vertical;"></textarea>
+                </div>
+                <button class="btn-primary" onclick="saveSettings()" style="width:100%; margin-top:1.5rem">💾 Salvar Configurações</button>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/js/app.js"></script>
 </body>

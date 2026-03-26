@@ -45,7 +45,8 @@ async function analyzeVideo() {
 
     try {
         updateLoadingStep("Extraindo transcrição do vídeo...");
-        const data = await apiCall("/api/analyze", { url });
+        const cookies = localStorage.getItem("yt_cookies") || "";
+        const data = await apiCall("/api/analyze", { url, cookies });
 
         state.videoId = data.video_id;
         state.videoUrl = data.video_url;
@@ -452,6 +453,26 @@ function escapeHtml(text) {
 
 function truncate(text, max) {
     return text.length > max ? text.slice(0, max - 1) + "…" : text;
+}
+
+// ===== SETTINGS =====
+
+function toggleSettings() {
+    const modal = $("#settings-modal");
+    if (modal.classList.contains("hidden")) {
+        modal.classList.remove("hidden");
+        const savedCookies = localStorage.getItem("yt_cookies") || "";
+        $("#input-cookies").value = savedCookies;
+    } else {
+        modal.classList.add("hidden");
+    }
+}
+
+function saveSettings() {
+    const cookies = $("#input-cookies").value.trim();
+    localStorage.setItem("yt_cookies", cookies);
+    toggleSettings();
+    showToast("Configurações salvas com sucesso!");
 }
 
 // ===== NAVIGATION =====

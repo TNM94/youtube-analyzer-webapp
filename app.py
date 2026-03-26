@@ -54,30 +54,45 @@ def extract_video_id(url: str) -> str:
     raise ValueError("URL inválida")
 
 
-def get_transcript(video_id: str, lang: str = "pt") -> str:
-    ytt = YouTubeTranscriptApi()
-    langs = [lang]
-    if lang != "pt":
-        langs.append("pt")
-    if "en" not in langs:
-        langs.append("en")
-
+def get_transcript(video_id: str, lang: str = "pt", cookies_text: str = None) -> str:
+    import tempfile
+    
+    cookie_file = None
+    if cookies_text:
+        fd, cookie_file = tempfile.mkstemp(suffix=".txt")
+        with os.fdopen(fd, 'w') as f:
+            f.write(cookies_text)
+            
     try:
-        entries = ytt.fetch(video_id, languages=langs)
-        return _join(entries)
-    except Exception:
-        pass
-
-    try:
-        for t in ytt.list(video_id):
+        if cookie_file:
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id, cookies=cookie_file)
+        else:
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            
+        langs = [lang]
+        if lang != "pt":
+            langs.append("pt")
+        if "en" not in langs:
+            langs.append("en")
+            
+        # Try to find exactly what we want
+        for l in langs:
             try:
+                t = transcript_list.find_transcript([l])
                 return _join(t.fetch())
             except Exception:
                 continue
+                
+        # Fallback to anything available
+        return _join(tuple(transcript_list)[0].fetch())
     except Exception as e:
-        raise RuntimeError(f"Sem transcrição: {e}")
-
-    raise RuntimeError("Nenhuma transcrição disponível")
+        raise RuntimeError(f"Erro na transcrição (IP bloqueado pelo YouTube ou vídeo sem legendas). Configure cookies do YouTube ou tente rodar localmente. Erro: {e}")
+    finally:
+        if cookie_file and os.path.exists(cookie_file):
+            try:
+                os.remove(cookie_file)
+            except:
+                pass
 
 
 def _join(entries) -> str:
@@ -91,19 +106,31 @@ def _join(entries) -> str:
 
 
 def call_gemini(prompt: str) -> dict:
+    import time
     client = get_client()
-    resp = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-    raw = resp.text.strip()
-    if raw.startswith("```"):
-        raw = re.sub(r'^```(?:json)?\s*\n?', '', raw)
-        raw = re.sub(r'\n?```\s*$', '', raw)
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        m = re.search(r'\{[\s\S]*\}', raw)
-        if m:
-            return json.loads(m.group())
-        raise RuntimeError(f"JSON inválido: {raw[:300]}")
+    max_retries = 3
+    
+    for attempt in range(max_retries):
+        try:
+            resp = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
+            raw = resp.text.strip()
+            if raw.startswith("```"):
+                raw = re.sub(r'^```(?:json)?\s*\n?', '', raw)
+                raw = re.sub(r'\n?```\s*$', '', raw)
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError:
+                m = re.search(r'\{[\s\S]*\}', raw)
+                if m:
+                    return json.loads(m.group())
+                raise RuntimeError(f"JSON inválido: {raw[:300]}")
+        except Exception as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                if attempt < max_retries - 1:
+                    print(f"⚠️ Limite API Gemini. Aguardando 15s (tentativa {attempt+1}/{max_retries})...")
+                    time.sleep(15)
+                    continue
+            raise e
 
 
 # ========== PROMPTS ==========
@@ -241,7 +268,8 @@ def analyze():
 
     try:
         video_id = extract_video_id(url)
-        transcript = get_transcript(video_id)
+        youtube_cookies = request.json.get("cookies", "").strip() or os.environ.get("YOUTUBE_COOKIES", "")
+        transcript = get_transcript(video_id, cookies_text=youtube_cookies)
 
         # Truncate if too long
         if len(transcript) > 80000:
