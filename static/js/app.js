@@ -46,8 +46,8 @@ async function analyzeVideo() {
     try {
         let transcriptData = null;
         
-        // Tenta usar a Extensão do Chrome (se instalada) - Método infalível via dataset
-        if (document.body.dataset.ytExtensionInstalled === "true") {
+        // Tenta usar a Extensão do Chrome (se instalada) - Método infalível via dataset seguro
+        if (document.documentElement.dataset.ytExtensionInstalled === "true" || document.body?.dataset?.ytExtensionInstalled === "true") {
             updateLoadingStep("Usando Extensão Pro para capturar legendas...");
             const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
             const videoId = videoIdMatch ? videoIdMatch[1] : url;
