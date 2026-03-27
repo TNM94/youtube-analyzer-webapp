@@ -52,12 +52,11 @@ async function analyzeVideo() {
             const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
             const videoId = videoIdMatch ? videoIdMatch[1] : url;
             
-            transcriptData = await new Promise((resolve) => {
+            transcriptData = await new Promise((resolve, reject) => {
                 const reqId = Date.now().toString();
                 // Timeout limite p/ extensão (8s)
                 const timeout = setTimeout(() => {
-                    showToast("⚠️ Timeout da Extensão (8s). Sem resposta do background script.");
-                    resolve(null);
+                    reject(new Error("Timeout da Extensão (8s). O componente de fundo parou de responder."));
                 }, 8000);
                 
                 const listener = (event) => {
@@ -68,8 +67,7 @@ async function analyzeVideo() {
                         if (event.data.success) {
                             resolve(event.data.transcript);
                         } else {
-                            showToast(`⚠️ Extensão falhou: ${event.data.error || "Erro desconhecido"}`);
-                            resolve(null);
+                            reject(new Error(`Extensão falhou ao ler legendas: ${event.data.error || "Erro desconhecido"}`));
                         }
                     }
                 };
@@ -81,10 +79,10 @@ async function analyzeVideo() {
                  // The promise resolved to null either via timeout or error
             }
         } else {
-            showToast("⚠️ A Extensão Chrome NÃO está injetada nesta página! Recarregue a aba, verifique as permissões ou atualize a extensão.");
+            throw new Error("A Extensão Pro NÃO está injetada nesta página! (Passo 1: Instale o ZIP. Passo 2: Fixe o ícone. Passo 3: Recarregue esta aba dando F5). Verifique se ela está ativada.");
         }
 
-        updateLoadingStep(transcriptData ? "Processando vídeo com a IA Gemini..." : "Extraindo transcrição via Nuvem e enviando para IA...");
+        updateLoadingStep("Enviando transcrição capturada para a IA Gemini...");
         
         const payload = { url: url };
         // Envia o texto via extensão p/ api se disponível (bypass Nuvem)
