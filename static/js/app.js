@@ -48,16 +48,16 @@ async function analyzeVideo() {
         
         // Tenta usar a Extensão do Chrome (se instalada) - Método infalível via dataset seguro
         if (document.documentElement.dataset.ytExtensionInstalled === "true" || document.body?.dataset?.ytExtensionInstalled === "true") {
-            updateLoadingStep("Usando Extensão Pro para capturar legendas...");
+            updateLoadingStep("Procurando legendas em Modo Fantasma (Pode demorar uns 15 segs)...");
             const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
             const videoId = videoIdMatch ? videoIdMatch[1] : url;
             
             transcriptData = await new Promise((resolve, reject) => {
                 const reqId = Date.now().toString();
-                // Timeout limite p/ extensão (8s)
+                // Timeout limite p/ extensão (25s) para Modo Fantasma
                 const timeout = setTimeout(() => {
-                    reject(new Error("Timeout da Extensão (8s). O componente de fundo parou de responder."));
-                }, 8000);
+                    reject(new Error("Timeout da Extensão (25s). O carregamento do vídeo demorou demais."));
+                }, 25000);
                 
                 const listener = (event) => {
                     if (event.source !== window || !event.data || event.data.type !== "YT_ANALYZER_RESPONSE") return;

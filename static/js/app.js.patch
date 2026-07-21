@@ -1,0 +1,19 @@
+--- webapp/static/js/app.js
++++ webapp/static/js/app.js
+@@ -75,6 +75,7 @@
+             transcriptData = await new Promise((resolve) => {
+                 const reqId = Date.now().toString();
+                 // Timeout limite p/ extensão (8s)
+-                const timeout = setTimeout(() => resolve(null), 8000);
++                const timeout = setTimeout(() => {
++                    showToast("⚠️ Timeout da Extensão (8s). Sem resposta.");
++                    resolve(null);
++                }, 8000);
+                 
+@@ -90,4 +91,6 @@
+             });
++        } else {
++            // Se for caindo direto na nuvem pq a variavel false
++            showToast("⚠️ Extensão Chrome não injetada (Desativada ou Erro de Permissão).");
+         }
+ 
